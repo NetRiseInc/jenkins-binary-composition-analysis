@@ -1,0 +1,25 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:l="/lib/layout" xmlns:st="jelly:stapler">
+    <l:layout title="Details">
+        <l:main-panel>
+            <h1>
+                Asset uploaded successfully
+            </h1>
+            <p>
+                <b>Asset name:</b> ${it.name}
+            </p>
+            <p>
+                <b>Asset ID:</b> ${it.assetId}
+            </p>
+            <!--<p>
+                Model: ${it.model}
+            </p>
+            <p>
+                Version: ${it.version}
+            </p>
+            <p>
+                Manufacturer: ${it.manufacturer}
+            </p>-->
+        </l:main-panel>
+    </l:layout>
+</j:jelly>

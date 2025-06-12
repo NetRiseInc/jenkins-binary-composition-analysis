@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+    The plugin to upload assets to NetRise API
+</div>

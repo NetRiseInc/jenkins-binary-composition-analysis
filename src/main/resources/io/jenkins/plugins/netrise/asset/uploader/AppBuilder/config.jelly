@@ -1,0 +1,32 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:c="/lib/credentials" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <f:entry title="Artifact" field="artifact">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="Name" field="name">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="Manufacturer (Optional)" field="manufacturer">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="Model (Optional)" field="model">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="Version (Optional)" field="version">
+        <f:textbox />
+    </f:entry>
+    <!--<f:optionalBlock name="credentials" title="Use credentials">
+        &lt;!&ndash;<f:entry title="View drive">
+            <f:textbox name="drive" value="${it.drive}"/>
+        </f:entry>&ndash;&gt;
+        <f:entry title="Authentication URL" field="authUrl">
+            <f:textbox />
+        </f:entry>
+        <f:entry title="Audience" field="audience">
+            <f:textbox />
+        </f:entry>
+        <f:entry field="credentialsId" title="Credentials">
+            <c:select/>
+        </f:entry>
+    </f:optionalBlock>-->
+</j:jelly>
