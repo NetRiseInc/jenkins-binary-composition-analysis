@@ -15,7 +15,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import javax.servlet.ServletException;
+import java.util.Set;
 
 import hudson.util.Secret;
 import io.jenkins.plugins.netrise.asset.uploader.api.Client;
@@ -30,8 +30,6 @@ import org.kohsuke.stapler.*;
 import org.kohsuke.stapler.verb.POST;
 
 public class AppBuilder extends Builder implements SimpleBuildStep {
-
-    public final static String URL_REGEX = "https?:\\/\\/(www\\.)?[\\w\\-]+\\.[a-z]{2,6}([\\/\\w\\.\\-\\?=%]*)?";
 
     private final String artifact;
     private final String name;
@@ -127,7 +125,9 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
         // upload the artifact
         String assetId = service.upload(Path.of(wsFile.toURI()), input);
 
-        listener.getLogger().println("Uploaded asset with id: " + assetId);
+        if (assetId != null && !assetId.isBlank()) {
+            listener.getLogger().println("Asset is uploaded");
+        }
 
         // create detail page
         run.addAction(new SimpleAction(input.name(), assetId));
@@ -141,6 +141,7 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
     @Symbol("uploadToNetRise")
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
+        private static final Set<String> httpSchemas = Set.of("http", "https");
 
         private String orgId;
         private String baseUrl;
@@ -153,8 +154,20 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
             load();
         }
 
+        private boolean isValidUrl(String url) {
+            if (url == null) {
+                return false;
+            }
+            try {
+                URI uri = new URI(url);
+                return uri.getScheme() != null && httpSchemas.contains( uri.getScheme() );
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
         @Override
-        public boolean configure(StaplerRequest2 req, JSONObject json) throws FormException {
+        public boolean configure(StaplerRequest2 req, JSONObject json) {
             req.bindJSON(this, json);
             save();
             return true;
@@ -233,79 +246,23 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
             this.tokenUrl = tokenUrl;
         }
 
-        public FormValidation doCheckArtifact(@QueryParameter String value)
-                throws IOException, ServletException {
-            if (value.isBlank()) {
-                return FormValidation.error("Please set a path to the file");
-            }
-
-            return FormValidation.ok();
-        }
-
-        public FormValidation doCheckName(@QueryParameter String value)
-                throws IOException, ServletException {
-            if (value.isBlank()) {
-                return FormValidation.error("Please set a name");
-            }
-
-            return FormValidation.ok();
-        }
-
-        public FormValidation doCheckOrgId(@QueryParameter String value)
-                throws IOException, ServletException {
-            if (value.isBlank()) {
-                return FormValidation.error("Please set the Organization ID");
-            }
-
-            return FormValidation.ok();
-        }
-
-        public FormValidation doCheckBaseUrl(@QueryParameter String value)
-                throws IOException, ServletException {
+        public FormValidation doCheckBaseUrl(@QueryParameter String value) {
             if (value.isBlank()) {
                 return FormValidation.error("Please set the Endpoint");
             }
-            if (!value.matches(URL_REGEX)) {
+            if (!isValidUrl(value)) {
                 return FormValidation.warning("The URL should be valid");
             }
 
             return FormValidation.ok();
         }
 
-        public FormValidation doCheckClientId(@QueryParameter String value)
-                throws IOException, ServletException {
-            if (value.isBlank()) {
-                return FormValidation.error("Please set the Client ID");
-            }
-
-            return FormValidation.ok();
-        }
-
-        public FormValidation doCheckClientSecret(@QueryParameter Secret value)
-                throws IOException, ServletException {
-            if (value.getPlainText().isBlank()) {
-                return FormValidation.error("Please set the Client Secret");
-            }
-
-            return FormValidation.ok();
-        }
-
-        public FormValidation doCheckTokenUrl(@QueryParameter String value)
-                throws IOException, ServletException {
+        public FormValidation doCheckTokenUrl(@QueryParameter String value) {
             if (value.isBlank()) {
                 return FormValidation.error("Please set the Token URL");
             }
-            if (!value.matches(URL_REGEX)) {
+            if (!isValidUrl(value)) {
                 return FormValidation.warning("The URL should be valid");
-            }
-
-            return FormValidation.ok();
-        }
-
-        public FormValidation doCheckAudience(@QueryParameter String value)
-                throws IOException, ServletException {
-            if (value.isBlank()) {
-                return FormValidation.error("Please set the Audience");
             }
 
             return FormValidation.ok();
@@ -317,7 +274,7 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
                                                @QueryParameter("clientId") final String clientId,
                                                @QueryParameter("clientSecret") final String clientSecret,
                                                @QueryParameter("audience") final String audience,
-                                               @AncestorInPath Job job) throws IOException, ServletException {
+                                               @AncestorInPath Job<?, ?> job) {
             try {
                 if (job == null) {
                     Jenkins.get().checkPermission(Jenkins.ADMINISTER);

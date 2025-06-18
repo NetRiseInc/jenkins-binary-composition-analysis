@@ -25,13 +25,11 @@ public class SimpleAction implements RunAction2 {
     @Override
     public void onAttached(Run<?, ?> run) {
         this.run = run;
-        System.out.println("Attached");
     }
 
     @Override
     public void onLoad(Run<?, ?> run) {
         this.run = run;
-        System.out.println("Loaded");
     }
 
     public Run<?, ?> getRun() {
@@ -45,11 +43,11 @@ public class SimpleAction implements RunAction2 {
 
     @Override
     public String getDisplayName() {
-        return "Upload Details";
+        return "Netrise Upload Details";
     }
 
     @Override
     public String getUrlName() {
-        return "uploadDetails";
+        return "netriseUploadDetails";
     }
 }

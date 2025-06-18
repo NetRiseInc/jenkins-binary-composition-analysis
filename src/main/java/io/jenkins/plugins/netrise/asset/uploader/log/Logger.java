@@ -27,14 +27,12 @@ public class Logger {
 
     public Logger(String name) {
         logger = java.util.logging.Logger.getLogger(name);
-        logger.setLevel(Level.ALL);
 
         Handler consoleHandler = new ConsoleHandler() {
             {
                 setOutputStream(System.out);
             }
         };
-        consoleHandler.setLevel(Level.FINE);
         logger.addHandler(consoleHandler);
 
         loggers.add(this);

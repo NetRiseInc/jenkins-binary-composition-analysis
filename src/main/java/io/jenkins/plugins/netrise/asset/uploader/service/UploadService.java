@@ -74,12 +74,12 @@ public class UploadService {
             boolean uploaded = Boolean.TRUE.equals(uploadResponse.uploaded());
             retry ++;
             if (uploaded) {
-                log.info("The file is uploaded. Asset ID:", uploadResponse.assetId());
+                log.debug("The file is uploaded. Asset ID:", uploadResponse.assetId());
                 return uploadResponse.assetId();
             } else if (retry > UPLOAD_CHECK_STATUS_MAX_NUMBER) {
                 throw new UploadException("Couldn't check the upload status after " + UPLOAD_CHECK_STATUS_MAX_NUMBER + " tries");
             } else {
-                log.info(retry, "retry check if file is uploaded", response.uploadId());
+                log.debug(retry, "retry check if file is uploaded", response.uploadId());
                 try {
                     Thread.sleep(UPLOAD_STATUS_CHECK_TIMEOUT);
                 } catch (InterruptedException e) {
