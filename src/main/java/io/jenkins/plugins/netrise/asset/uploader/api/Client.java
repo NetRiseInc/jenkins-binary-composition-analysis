@@ -59,9 +59,13 @@ public class Client {
         );
     }
 
-    private HttpRequest.Builder getRequestBuilder(URI uri, Map<String, Object> headers) {
-        HttpRequest.Builder builder = HttpRequest.newBuilder()
+    protected HttpRequest.Builder getRequestBuilder(URI uri) {
+        return HttpRequest.newBuilder()
                 .uri(uri);
+    }
+
+    private HttpRequest.Builder getAuthenticatedRequestBuilder(URI uri, Map<String, Object> headers) {
+        HttpRequest.Builder builder = getRequestBuilder(uri);
         if (headers != null) {
             for (Map.Entry<String, Object> e: headers.entrySet()) {
                 if (e.getKey() != null && e.getValue() != null) {
@@ -79,8 +83,8 @@ public class Client {
         return builder;
     }
 
-    private HttpRequest.Builder getRequestBuilder(URI uri) {
-        return getRequestBuilder(uri, null);
+    private HttpRequest.Builder getAuthenticatedRequestBuilder(URI uri) {
+        return getAuthenticatedRequestBuilder(uri, null);
     }
 
     /**
@@ -92,7 +96,7 @@ public class Client {
      * @return Response wrapper
      * */
     public Response get(URI uri) {
-        HttpRequest request = getRequestBuilder(uri)
+        HttpRequest request = getAuthenticatedRequestBuilder(uri)
                 .GET()
                 .build();
 
@@ -110,7 +114,7 @@ public class Client {
      * @return Response wrapper
      * */
     public Response post(URI uri, Object data) {
-        HttpRequest request = getRequestBuilder(uri, Map.of(CONTENT_TYPE_HEADER, APP_JSON_CONTENT_TYPE))
+        HttpRequest request = getAuthenticatedRequestBuilder(uri, Map.of(CONTENT_TYPE_HEADER, APP_JSON_CONTENT_TYPE))
                 .POST(HttpRequest.BodyPublishers.ofString(toJson(data)))
                 .build();
 
@@ -129,7 +133,7 @@ public class Client {
     public Response upload(URI uri, Path path) {
         HttpRequest request;
         try {
-            request = getRequestBuilder(uri)
+            request = getAuthenticatedRequestBuilder(uri)
                     .PUT(HttpRequest.BodyPublishers.ofFile(path))
                     .build();
         } catch (FileNotFoundException e) {
@@ -205,8 +209,7 @@ public class Client {
 
         log.debug("Authentication started");
 
-        HttpRequest req = HttpRequest.newBuilder()
-                .uri(tokenUri)
+        HttpRequest req = getRequestBuilder(tokenUri)
                 .header(CONTENT_TYPE_HEADER, APP_JSON_CONTENT_TYPE)
                 .POST(HttpRequest.BodyPublishers.ofString(toJson(request)))
                 .build();

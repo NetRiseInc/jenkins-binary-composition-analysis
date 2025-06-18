@@ -19,6 +19,7 @@ import java.util.Set;
 
 import hudson.util.Secret;
 import io.jenkins.plugins.netrise.asset.uploader.api.Client;
+import io.jenkins.plugins.netrise.asset.uploader.api.ProxyClient;
 import io.jenkins.plugins.netrise.asset.uploader.env.EnvMapper;
 import io.jenkins.plugins.netrise.asset.uploader.model.SubmitAssetInput;
 import io.jenkins.plugins.netrise.asset.uploader.service.UploadService;
@@ -281,7 +282,7 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
                 } else {
                     job.checkPermission(Item.CONFIGURE);
                 }
-                Client client = new Client(URI.create(tokenUrl), orgId, clientId, clientSecret, audience);
+                Client client = new ProxyClient(URI.create(tokenUrl), orgId, clientId, clientSecret, audience);
                 client.authenticate();
                 return FormValidation.ok("Authenticated successfully.");
             } catch (Exception e) {

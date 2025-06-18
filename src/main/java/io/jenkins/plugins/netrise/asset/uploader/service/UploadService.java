@@ -1,6 +1,7 @@
 package io.jenkins.plugins.netrise.asset.uploader.service;
 
 import io.jenkins.plugins.netrise.asset.uploader.api.Client;
+import io.jenkins.plugins.netrise.asset.uploader.api.ProxyClient;
 import io.jenkins.plugins.netrise.asset.uploader.log.Logger;
 import io.jenkins.plugins.netrise.asset.uploader.model.*;
 
@@ -31,7 +32,7 @@ public class UploadService {
      * @param audience Audience
      * */
     public UploadService(URI baseUri, URI tokenUri, String organization, String clientId, String clientSecret, String audience) {
-        client = new Client(tokenUri, organization, clientId, clientSecret, audience);
+        client = new ProxyClient(tokenUri, organization, clientId, clientSecret, audience);
         uri = baseUri;
     }
 
