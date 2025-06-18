@@ -6,13 +6,15 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.*;
+import hudson.remoting.VirtualChannel;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.Serial;
 import java.net.URI;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -27,6 +29,7 @@ import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 import org.jenkinsci.Symbol;
+import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.*;
 import org.kohsuke.stapler.verb.POST;
 
@@ -112,10 +115,6 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
         FilePath wsFile = workspace.child(artifact);
         listener.getLogger().println("File to upload: " + wsFile.toURI());
 
-        if (!wsFile.exists()) {
-            throw new RuntimeException("No such file in the workspace: " + wsFile);
-        }
-
         DescriptorImpl descriptor = getDescriptor();
 
         // check global config
@@ -124,14 +123,7 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
         UploadService service = getUploadService(descriptor);
 
         // upload the artifact
-        String assetId = service.upload(Path.of(wsFile.toURI()), input);
-
-        if (assetId != null && !assetId.isBlank()) {
-            listener.getLogger().println("Asset is uploaded");
-        }
-
-        // create detail page
-        run.addAction(new SimpleAction(input.name(), assetId));
+        wsFile.act(new UploadFileCallable(service, input, listener, run));
     }
 
     @Override
@@ -299,6 +291,46 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
         @Override
         public String getDisplayName() {
             return "NetRise Plugin";
+        }
+    }
+
+    private static class UploadFileCallable implements FilePath.FileCallable<Void> {
+        @Serial
+        private static final long serialVersionUID = 3179220848351167640L;
+
+        private final UploadService service;
+        private final SubmitAssetInput input;
+        private final TaskListener listener;
+        private final Run<?, ?> run;
+
+        public UploadFileCallable(UploadService service, SubmitAssetInput input, TaskListener listener, Run<?, ?> run) {
+            this.service = service;
+            this.input = input;
+            this.listener = listener;
+            this.run = run;
+        }
+
+        @Override
+        public Void invoke(File file, VirtualChannel channel) {
+            if (!file.exists()) {
+                throw new RuntimeException("No such file in the workspace: " + file);
+            }
+
+            String assetId = service.upload(file.toPath(), input);
+
+            if (assetId != null && !assetId.isBlank()) {
+                listener.getLogger().println("Asset is uploaded");
+
+                // create detail page
+                run.addAction(new SimpleAction(input.name(), assetId));
+            }
+
+            return null;
+        }
+
+        @Override
+        public void checkRoles(RoleChecker checker) throws SecurityException {
+
         }
     }
 }
