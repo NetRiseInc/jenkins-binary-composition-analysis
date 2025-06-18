@@ -1,8 +1,10 @@
 package io.jenkins.plugins.netrise.asset.uploader.api;
 
-import io.jenkins.plugins.netrise.asset.uploader.json.JsonMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jenkins.plugins.netrise.asset.uploader.log.Logger;
-import io.jenkins.plugins.netrise.asset.uploader.model.Error;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -232,7 +234,12 @@ public class Client {
     }
 
     private <T> String toJson(T data) {
-        return JsonMapper.toJson(data);
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            return mapper.writeValueAsString(data);
+        } catch (JsonProcessingException e) {
+            throw new ClientException("JSON stringify error.", e.getLocalizedMessage());
+        }
     }
 
     /**
@@ -327,7 +334,36 @@ public class Client {
          * Return response body parsed as JSON and constructed as Java object of the provided class
          * */
         public <T> T asJson(Class<T> clz) {
-            return body != null ? JsonMapper.parseJson(body, clz) : null;
+            if (body == null) {
+                return null;
+            }
+
+            ObjectMapper mapper = new ObjectMapper()
+                    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+            try {
+                return mapper.readValue(body, clz);
+            } catch (JsonProcessingException e) {
+                throw new ClientException("JSON parse error.", e.getLocalizedMessage());
+            }
+        }
+
+        /**
+         * Return response body parsed as JSON and constructed as Java object of the provided class
+         * */
+        public <T> T asJson(TypeReference<T> typeReference) {
+            if (body == null) {
+                return null;
+            }
+
+            ObjectMapper mapper = new ObjectMapper()
+                    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+            try {
+                return mapper.readValue(body, typeReference);
+            } catch (JsonProcessingException e) {
+                throw new ClientException("JSON parse error.", e.getLocalizedMessage());
+            }
         }
 
         @Override

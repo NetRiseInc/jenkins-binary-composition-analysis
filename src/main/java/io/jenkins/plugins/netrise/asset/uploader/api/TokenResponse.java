@@ -1,6 +1,6 @@
 package io.jenkins.plugins.netrise.asset.uploader.api;
 
-import io.jenkins.plugins.netrise.asset.uploader.json.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Token response instance
