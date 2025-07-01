@@ -159,7 +159,7 @@ public class ClientTest {
                 .thenReturn(mockResponse);
         whenSuccessfulResponse("{access_token:\"valid_token\" token_type:\"Bearer\" expires_in:3600}");
 
-        assertThrows(AuthException.class, () -> client.authenticate()); // Malformed JSON
+        assertThrows(ClientException.class, () -> client.authenticate()); // Malformed JSON
     }
 
     @Test
@@ -331,7 +331,7 @@ public class ClientTest {
         class Test {}
 
         assertNotNull(response.getBody());
-        assertNull(response.asJson(Test.class));
+        assertThrows(ClientException.class, () -> response.asJson(Test.class));
     }
 
     @Test

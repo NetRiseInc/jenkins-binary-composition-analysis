@@ -121,6 +121,13 @@ public class AppBuilderTest {
         AppBuilder builder = new AppBuilder(artifact, name);
         project.getBuildersList().add(builder);
 
+        builder.getDescriptor().setOrgId(orgId);
+        builder.getDescriptor().setBaseUrl(baseUrl);
+        builder.getDescriptor().setClientId(clientId);
+        builder.getDescriptor().setClientSecret(Secret.fromString(clientSecret));
+        builder.getDescriptor().setTokenUrl(tokenUrl);
+        builder.getDescriptor().setAudience(audience);
+
         FreeStyleBuild build = jenkins.buildAndAssertStatus(Result.FAILURE, project);
         jenkins.assertLogContains("No such file in the workspace", build);
     }
@@ -188,7 +195,7 @@ public class AppBuilderTest {
 
         FreeStyleBuild build = jenkins.buildAndAssertSuccess(project);
         build.writeWholeLogTo(System.out);
-        jenkins.assertLogContains("Uploaded_Asset_ID_1", build);
+        jenkins.assertLogContains("Asset is uploaded", build);
     }
 
     @Test

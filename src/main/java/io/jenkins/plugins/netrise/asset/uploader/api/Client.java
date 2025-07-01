@@ -1,8 +1,10 @@
 package io.jenkins.plugins.netrise.asset.uploader.api;
 
-import io.jenkins.plugins.netrise.asset.uploader.json.JsonMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jenkins.plugins.netrise.asset.uploader.log.Logger;
-import io.jenkins.plugins.netrise.asset.uploader.model.Error;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -59,9 +61,13 @@ public class Client {
         );
     }
 
-    private HttpRequest.Builder getRequestBuilder(URI uri, Map<String, Object> headers) {
-        HttpRequest.Builder builder = HttpRequest.newBuilder()
+    protected HttpRequest.Builder getRequestBuilder(URI uri) {
+        return HttpRequest.newBuilder()
                 .uri(uri);
+    }
+
+    private HttpRequest.Builder getAuthenticatedRequestBuilder(URI uri, Map<String, Object> headers) {
+        HttpRequest.Builder builder = getRequestBuilder(uri);
         if (headers != null) {
             for (Map.Entry<String, Object> e: headers.entrySet()) {
                 if (e.getKey() != null && e.getValue() != null) {
@@ -79,8 +85,8 @@ public class Client {
         return builder;
     }
 
-    private HttpRequest.Builder getRequestBuilder(URI uri) {
-        return getRequestBuilder(uri, null);
+    private HttpRequest.Builder getAuthenticatedRequestBuilder(URI uri) {
+        return getAuthenticatedRequestBuilder(uri, null);
     }
 
     /**
@@ -92,7 +98,7 @@ public class Client {
      * @return Response wrapper
      * */
     public Response get(URI uri) {
-        HttpRequest request = getRequestBuilder(uri)
+        HttpRequest request = getAuthenticatedRequestBuilder(uri)
                 .GET()
                 .build();
 
@@ -110,7 +116,7 @@ public class Client {
      * @return Response wrapper
      * */
     public Response post(URI uri, Object data) {
-        HttpRequest request = getRequestBuilder(uri, Map.of(CONTENT_TYPE_HEADER, APP_JSON_CONTENT_TYPE))
+        HttpRequest request = getAuthenticatedRequestBuilder(uri, Map.of(CONTENT_TYPE_HEADER, APP_JSON_CONTENT_TYPE))
                 .POST(HttpRequest.BodyPublishers.ofString(toJson(data)))
                 .build();
 
@@ -129,7 +135,7 @@ public class Client {
     public Response upload(URI uri, Path path) {
         HttpRequest request;
         try {
-            request = getRequestBuilder(uri)
+            request = getAuthenticatedRequestBuilder(uri)
                     .PUT(HttpRequest.BodyPublishers.ofFile(path))
                     .build();
         } catch (FileNotFoundException e) {
@@ -205,8 +211,7 @@ public class Client {
 
         log.debug("Authentication started");
 
-        HttpRequest req = HttpRequest.newBuilder()
-                .uri(tokenUri)
+        HttpRequest req = getRequestBuilder(tokenUri)
                 .header(CONTENT_TYPE_HEADER, APP_JSON_CONTENT_TYPE)
                 .POST(HttpRequest.BodyPublishers.ofString(toJson(request)))
                 .build();
@@ -229,7 +234,12 @@ public class Client {
     }
 
     private <T> String toJson(T data) {
-        return JsonMapper.toJson(data);
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            return mapper.writeValueAsString(data);
+        } catch (JsonProcessingException e) {
+            throw new ClientException("JSON stringify error.", e.getLocalizedMessage());
+        }
     }
 
     /**
@@ -324,7 +334,36 @@ public class Client {
          * Return response body parsed as JSON and constructed as Java object of the provided class
          * */
         public <T> T asJson(Class<T> clz) {
-            return body != null ? JsonMapper.parseJson(body, clz) : null;
+            if (body == null) {
+                return null;
+            }
+
+            ObjectMapper mapper = new ObjectMapper()
+                    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+            try {
+                return mapper.readValue(body, clz);
+            } catch (JsonProcessingException e) {
+                throw new ClientException("JSON parse error.", e.getLocalizedMessage());
+            }
+        }
+
+        /**
+         * Return response body parsed as JSON and constructed as Java object of the provided class
+         * */
+        public <T> T asJson(TypeReference<T> typeReference) {
+            if (body == null) {
+                return null;
+            }
+
+            ObjectMapper mapper = new ObjectMapper()
+                    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+            try {
+                return mapper.readValue(body, typeReference);
+            } catch (JsonProcessingException e) {
+                throw new ClientException("JSON parse error.", e.getLocalizedMessage());
+            }
         }
 
         @Override
