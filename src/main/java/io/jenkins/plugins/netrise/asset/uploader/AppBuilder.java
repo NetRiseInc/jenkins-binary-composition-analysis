@@ -25,6 +25,7 @@ import io.jenkins.plugins.netrise.asset.uploader.api.ProxyClient;
 import io.jenkins.plugins.netrise.asset.uploader.env.EnvMapper;
 import io.jenkins.plugins.netrise.asset.uploader.model.SubmitAssetInput;
 import io.jenkins.plugins.netrise.asset.uploader.service.UploadService;
+import jenkins.MasterToSlaveFileCallable;
 import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
@@ -239,7 +240,9 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
             this.tokenUrl = tokenUrl;
         }
 
+        @POST
         public FormValidation doCheckBaseUrl(@QueryParameter String value) {
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             if (value.isBlank()) {
                 return FormValidation.error("Please set the Endpoint");
             }
@@ -250,7 +253,9 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
             return FormValidation.ok();
         }
 
+        @POST
         public FormValidation doCheckTokenUrl(@QueryParameter String value) {
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             if (value.isBlank()) {
                 return FormValidation.error("Please set the Token URL");
             }
@@ -268,12 +273,12 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
                                                @QueryParameter("clientSecret") final String clientSecret,
                                                @QueryParameter("audience") final String audience,
                                                @AncestorInPath Job<?, ?> job) {
+            if (job == null) {
+                Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+            } else {
+                job.checkPermission(Item.CONFIGURE);
+            }
             try {
-                if (job == null) {
-                    Jenkins.get().checkPermission(Jenkins.ADMINISTER);
-                } else {
-                    job.checkPermission(Item.CONFIGURE);
-                }
                 Client client = new ProxyClient(URI.create(tokenUrl), orgId, clientId, clientSecret, audience);
                 client.authenticate();
                 return FormValidation.ok("Authenticated successfully.");
@@ -294,7 +299,7 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
         }
     }
 
-    private static class UploadFileCallable implements FilePath.FileCallable<Void> {
+    private static class UploadFileCallable extends MasterToSlaveFileCallable<Void> {
         @Serial
         private static final long serialVersionUID = 3179220848351167640L;
 
@@ -326,11 +331,6 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
             }
 
             return null;
-        }
-
-        @Override
-        public void checkRoles(RoleChecker checker) throws SecurityException {
-
         }
     }
 }
