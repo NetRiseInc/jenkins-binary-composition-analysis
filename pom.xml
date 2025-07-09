@@ -39,7 +39,7 @@
     <jenkins.baseline>2.479</jenkins.baseline>
     <jenkins.version>${jenkins.baseline}.3</jenkins.version>
     <!-- https://repo.jenkins-ci.org/public/io/jenkins/tools/bom/ -->
-    <jenkinsBom.version>4890.vfca_82c6741a_d</jenkinsBom.version>
+    <jenkinsBom.version>4969.v6ffa_18d90c9f</jenkinsBom.version>
     <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
 
     <spotless.check.skip>false</spotless.check.skip>
