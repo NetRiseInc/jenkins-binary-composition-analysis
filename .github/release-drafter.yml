@@ -1,4 +1,14 @@
+# .github/release-drafter.yml
 # See https://github.com/jenkinsci/.github/blob/master/.github/release-drafter.adoc
 ---
 _extends: .github
 tag-template: netrise-binary-composition-analysis-$NEXT_MINOR_VERSION
+
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  ## Contributors
+
+  $CONTRIBUTORS
