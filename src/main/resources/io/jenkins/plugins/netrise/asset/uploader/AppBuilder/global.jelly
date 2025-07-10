@@ -2,22 +2,22 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
     <f:section title="NetRise">
         <f:entry title="Endpoint" field="baseUrl">
-            <f:textbox />
+            <f:textbox clazz="required" />
         </f:entry>
         <f:entry title="Organization ID" field="orgId">
-            <f:textbox />
+            <f:textbox clazz="required" />
         </f:entry>
         <f:entry title="Client ID" field="clientId">
-            <f:textbox />
+            <f:textbox clazz="required" />
         </f:entry>
         <f:entry title="Client Secret" field="clientSecret">
-            <f:password />
+            <f:password clazz="required" />
         </f:entry>
         <f:entry title="Token URL" field="tokenUrl">
-            <f:textbox />
+            <f:textbox clazz="required" />
         </f:entry>
         <f:entry title="Audience" field="audience">
-            <f:textbox />
+            <f:textbox clazz="required" />
         </f:entry>
         <f:validateButton
                 title="${%Test Connection}" progress="${%Testing...}"

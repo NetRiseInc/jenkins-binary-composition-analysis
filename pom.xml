@@ -10,13 +10,13 @@
   </parent>
 
   <groupId>io.jenkins.plugins</groupId>
-  <artifactId>netrise-asset-uploader</artifactId>
+  <artifactId>netrise-binary-composition-analysis</artifactId>
   <version>${revision}${changelist}</version>
   <packaging>hpi</packaging>
 
   <!-- https://www.jenkins.io/doc/developer/publishing/style-guides/#plugin-naming-convention -->
   <name>NetRise</name>
-  <url>https://netrise.io</url>
+  <url>https://github.com/${gitHubRepo}</url>
   <!-- should be a valid license https://www.jenkins.io/doc/developer/publishing/preparation/#license -->
   <licenses>
     <license>
@@ -25,12 +25,12 @@
     </license>
   </licenses>
 
-  <!--<scm child.scm.connection.inherit.append.path="false" child.scm.developerConnection.inherit.append.path="false" child.scm.url.inherit.append.path="false">
+  <scm child.scm.connection.inherit.append.path="false" child.scm.developerConnection.inherit.append.path="false" child.scm.url.inherit.append.path="false">
     <connection>scm:git:https://github.com/${gitHubRepo}</connection>
     <developerConnection>scm:git:https://github.com/${gitHubRepo}</developerConnection>
     <tag>${scmTag}</tag>
     <url>https://github.com/${gitHubRepo}</url>
-  </scm>-->
+  </scm>
 
   <properties>
     <revision>0.0.1</revision>
@@ -40,18 +40,31 @@
     <jenkins.version>${jenkins.baseline}.3</jenkins.version>
     <!-- https://repo.jenkins-ci.org/public/io/jenkins/tools/bom/ -->
     <jenkinsBom.version>4969.v6ffa_18d90c9f</jenkinsBom.version>
-    <!--<gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>-->
+    <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
 
     <spotless.check.skip>false</spotless.check.skip>
-    <java.version>21</java.version>
-    <maven.compiler.target>${java.version}</maven.compiler.target>
-    <maven.compiler.source>${java.version}</maven.compiler.source>
-    <maven.compiler.release>${java.version}</maven.compiler.release>
-    <maven.compiler.testRelease>${maven.compiler.release}</maven.compiler.testRelease>
     <mockito.version>5.17.0</mockito.version>
+    <jackson.version>2.19.1</jackson.version>
   </properties>
 
   <dependencies>
+    <!-- JSON libs -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>

@@ -1,11 +1,14 @@
 package io.jenkins.plugins.netrise.asset.uploader.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import io.jenkins.plugins.netrise.asset.uploader.api.Client;
+import io.jenkins.plugins.netrise.asset.uploader.api.ProxyClient;
 import io.jenkins.plugins.netrise.asset.uploader.log.Logger;
 import io.jenkins.plugins.netrise.asset.uploader.model.*;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.stream.Collectors;
 
 /**
  * Service to upload asset.
@@ -31,7 +34,7 @@ public class UploadService {
      * @param audience Audience
      * */
     public UploadService(URI baseUri, URI tokenUri, String organization, String clientId, String clientSecret, String audience) {
-        client = new Client(tokenUri, organization, clientId, clientSecret, audience);
+        client = new ProxyClient(tokenUri, organization, clientId, clientSecret, audience);
         uri = baseUri;
     }
 
@@ -45,12 +48,21 @@ public class UploadService {
      * */
     public String upload(Path file, SubmitAssetInput input) {
         log.debug("Start file uploading...");
-        SubmitAssetResponse response = client.post(uri,
+        QueryResponse<SubmitAssetWrapper<SubmitAssetResponse>> response = client.post(uri,
                 new Query<>(Queries.SUBMIT_ASSET_QUERY, new SubmitAssetVariables<>(
-                        input, file.getFileName().toString()))).asJson(SubmitAssetResponse.class);
+                        input, file.getFileName().toString()))).asJson(new TypeReference<>() {});
 
-        log.debug("Obtained uploadId / uploadUrl:", response.uploadId(), "/", response.uploadUrl());
-        URI uploadUri = URI.create(response.uploadUrl());
+        if (response.data() == null || response.data().getData() == null) {
+            String error = response.errors() != null
+                    ? response.errors().stream().map(QueryError::message).collect(Collectors.joining(", "))
+                    : null;
+            throw new UploadException("Couldn't upload the file to the server" + (error != null ? ": " + error : "."));
+        }
+
+        SubmitAssetResponse submitAssetResponse = response.data().getData();
+
+        log.debug("Obtained uploadId / uploadUrl:", submitAssetResponse.uploadId(), "/", submitAssetResponse.uploadUrl());
+        URI uploadUri = URI.create(submitAssetResponse.uploadUrl());
         int uploadStatus = uploadFile(uploadUri, file);
 
         int uploadRetry = 0;
@@ -64,26 +76,29 @@ public class UploadService {
         }
 
         long retry = 0;
-        log.debug("Check if uploading is finished:", response.uploadId());
+        log.debug("Check if uploading is finished:", submitAssetResponse.uploadId());
 
         while (true) {
-            AssetUploadResponse uploadResponse = client.post(uri,
+            QueryResponse<AssetUploadWrapper<AssetUploadResponse>> uploadResponse = client.post(uri,
                             new Query<>(Queries.ASSET_UPLOAD_QUERY, new Variables<>(
-                                    new AssetUploadInput(response.uploadId()))))
-                    .asJson(AssetUploadResponse.class);
-            boolean uploaded = Boolean.TRUE.equals(uploadResponse.uploaded());
+                                    new AssetUploadInput(submitAssetResponse.uploadId()))))
+                    .asJson(new TypeReference<>() {});
+            AssetUploadResponse assetUploadResponse = uploadResponse.data() != null && uploadResponse.data().assetUpload() != null
+                    ? uploadResponse.data().assetUpload()
+                    : new AssetUploadResponse(null, null, false);
+            boolean uploaded = Boolean.TRUE.equals(assetUploadResponse.uploaded());
             retry ++;
             if (uploaded) {
-                log.info("The file is uploaded. Asset ID:", uploadResponse.assetId());
-                return uploadResponse.assetId();
+                log.debug("The file is uploaded. Asset ID:", assetUploadResponse.assetId());
+                return assetUploadResponse.assetId();
             } else if (retry > UPLOAD_CHECK_STATUS_MAX_NUMBER) {
                 throw new UploadException("Couldn't check the upload status after " + UPLOAD_CHECK_STATUS_MAX_NUMBER + " tries");
             } else {
-                log.info(retry, "retry check if file is uploaded", response.uploadId());
+                log.debug(retry, "retry check if file is uploaded", submitAssetResponse.uploadId());
                 try {
                     Thread.sleep(UPLOAD_STATUS_CHECK_TIMEOUT);
                 } catch (InterruptedException e) {
-                    log.error("File upload status check is failed: " + uploadResponse.assetId(), e);
+                    log.error("File upload status check is failed: " + assetUploadResponse.assetId(), e);
                     throw new UploadException(e.getLocalizedMessage());
                 }
             }

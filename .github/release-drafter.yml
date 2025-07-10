@@ -1,4 +1,4 @@
 # See https://github.com/jenkinsci/.github/blob/master/.github/release-drafter.adoc
 ---
 _extends: .github
-tag-template: netrise-asset-uploader-$NEXT_MINOR_VERSION
+tag-template: netrise-binary-composition-analysis-$NEXT_MINOR_VERSION

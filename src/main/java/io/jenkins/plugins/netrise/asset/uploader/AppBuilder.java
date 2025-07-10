@@ -6,32 +6,35 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.*;
+import hudson.remoting.VirtualChannel;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.Serial;
 import java.net.URI;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import javax.servlet.ServletException;
+import java.util.Set;
 
 import hudson.util.Secret;
 import io.jenkins.plugins.netrise.asset.uploader.api.Client;
+import io.jenkins.plugins.netrise.asset.uploader.api.ProxyClient;
 import io.jenkins.plugins.netrise.asset.uploader.env.EnvMapper;
 import io.jenkins.plugins.netrise.asset.uploader.model.SubmitAssetInput;
 import io.jenkins.plugins.netrise.asset.uploader.service.UploadService;
+import jenkins.MasterToSlaveFileCallable;
 import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 import org.jenkinsci.Symbol;
+import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.*;
 import org.kohsuke.stapler.verb.POST;
 
 public class AppBuilder extends Builder implements SimpleBuildStep {
-
-    public final static String URL_REGEX = "https?:\\/\\/(www\\.)?[\\w\\-]+\\.[a-z]{2,6}([\\/\\w\\.\\-\\?=%]*)?";
 
     private final String artifact;
     private final String name;
@@ -113,10 +116,6 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
         FilePath wsFile = workspace.child(artifact);
         listener.getLogger().println("File to upload: " + wsFile.toURI());
 
-        if (!wsFile.exists()) {
-            throw new RuntimeException("No such file in the workspace: " + wsFile);
-        }
-
         DescriptorImpl descriptor = getDescriptor();
 
         // check global config
@@ -125,12 +124,7 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
         UploadService service = getUploadService(descriptor);
 
         // upload the artifact
-        String assetId = service.upload(Path.of(wsFile.toURI()), input);
-
-        listener.getLogger().println("Uploaded asset with id: " + assetId);
-
-        // create detail page
-        run.addAction(new SimpleAction(input.name(), assetId));
+        wsFile.act(new UploadFileCallable(service, input, listener, run));
     }
 
     @Override
@@ -141,6 +135,7 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
     @Symbol("uploadToNetRise")
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
+        private static final Set<String> httpSchemas = Set.of("http", "https");
 
         private String orgId;
         private String baseUrl;
@@ -153,8 +148,20 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
             load();
         }
 
+        private boolean isValidUrl(String url) {
+            if (url == null) {
+                return false;
+            }
+            try {
+                URI uri = new URI(url);
+                return uri.getScheme() != null && httpSchemas.contains( uri.getScheme() );
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
         @Override
-        public boolean configure(StaplerRequest2 req, JSONObject json) throws FormException {
+        public boolean configure(StaplerRequest2 req, JSONObject json) {
             req.bindJSON(this, json);
             save();
             return true;
@@ -233,79 +240,27 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
             this.tokenUrl = tokenUrl;
         }
 
-        public FormValidation doCheckArtifact(@QueryParameter String value)
-                throws IOException, ServletException {
-            if (value.isBlank()) {
-                return FormValidation.error("Please set a path to the file");
-            }
-
-            return FormValidation.ok();
-        }
-
-        public FormValidation doCheckName(@QueryParameter String value)
-                throws IOException, ServletException {
-            if (value.isBlank()) {
-                return FormValidation.error("Please set a name");
-            }
-
-            return FormValidation.ok();
-        }
-
-        public FormValidation doCheckOrgId(@QueryParameter String value)
-                throws IOException, ServletException {
-            if (value.isBlank()) {
-                return FormValidation.error("Please set the Organization ID");
-            }
-
-            return FormValidation.ok();
-        }
-
-        public FormValidation doCheckBaseUrl(@QueryParameter String value)
-                throws IOException, ServletException {
+        @POST
+        public FormValidation doCheckBaseUrl(@QueryParameter String value) {
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             if (value.isBlank()) {
                 return FormValidation.error("Please set the Endpoint");
             }
-            if (!value.matches(URL_REGEX)) {
+            if (!isValidUrl(value)) {
                 return FormValidation.warning("The URL should be valid");
             }
 
             return FormValidation.ok();
         }
 
-        public FormValidation doCheckClientId(@QueryParameter String value)
-                throws IOException, ServletException {
-            if (value.isBlank()) {
-                return FormValidation.error("Please set the Client ID");
-            }
-
-            return FormValidation.ok();
-        }
-
-        public FormValidation doCheckClientSecret(@QueryParameter Secret value)
-                throws IOException, ServletException {
-            if (value.getPlainText().isBlank()) {
-                return FormValidation.error("Please set the Client Secret");
-            }
-
-            return FormValidation.ok();
-        }
-
-        public FormValidation doCheckTokenUrl(@QueryParameter String value)
-                throws IOException, ServletException {
+        @POST
+        public FormValidation doCheckTokenUrl(@QueryParameter String value) {
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             if (value.isBlank()) {
                 return FormValidation.error("Please set the Token URL");
             }
-            if (!value.matches(URL_REGEX)) {
+            if (!isValidUrl(value)) {
                 return FormValidation.warning("The URL should be valid");
-            }
-
-            return FormValidation.ok();
-        }
-
-        public FormValidation doCheckAudience(@QueryParameter String value)
-                throws IOException, ServletException {
-            if (value.isBlank()) {
-                return FormValidation.error("Please set the Audience");
             }
 
             return FormValidation.ok();
@@ -317,14 +272,14 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
                                                @QueryParameter("clientId") final String clientId,
                                                @QueryParameter("clientSecret") final String clientSecret,
                                                @QueryParameter("audience") final String audience,
-                                               @AncestorInPath Job job) throws IOException, ServletException {
+                                               @AncestorInPath Job<?, ?> job) {
+            if (job == null) {
+                Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+            } else {
+                job.checkPermission(Item.CONFIGURE);
+            }
             try {
-                if (job == null) {
-                    Jenkins.get().checkPermission(Jenkins.ADMINISTER);
-                } else {
-                    job.checkPermission(Item.CONFIGURE);
-                }
-                Client client = new Client(URI.create(tokenUrl), orgId, clientId, clientSecret, audience);
+                Client client = new ProxyClient(URI.create(tokenUrl), orgId, clientId, clientSecret, audience);
                 client.authenticate();
                 return FormValidation.ok("Authenticated successfully.");
             } catch (Exception e) {
@@ -341,6 +296,41 @@ public class AppBuilder extends Builder implements SimpleBuildStep {
         @Override
         public String getDisplayName() {
             return "NetRise Plugin";
+        }
+    }
+
+    private static class UploadFileCallable extends MasterToSlaveFileCallable<Void> {
+        @Serial
+        private static final long serialVersionUID = 3179220848351167640L;
+
+        private final UploadService service;
+        private final SubmitAssetInput input;
+        private final TaskListener listener;
+        private final Run<?, ?> run;
+
+        public UploadFileCallable(UploadService service, SubmitAssetInput input, TaskListener listener, Run<?, ?> run) {
+            this.service = service;
+            this.input = input;
+            this.listener = listener;
+            this.run = run;
+        }
+
+        @Override
+        public Void invoke(File file, VirtualChannel channel) {
+            if (!file.exists()) {
+                throw new RuntimeException("No such file in the workspace: " + file);
+            }
+
+            String assetId = service.upload(file.toPath(), input);
+
+            if (assetId != null && !assetId.isBlank()) {
+                listener.getLogger().println("Asset is uploaded");
+
+                // create detail page
+                run.addAction(new SimpleAction(input.name(), assetId));
+            }
+
+            return null;
         }
     }
 }
