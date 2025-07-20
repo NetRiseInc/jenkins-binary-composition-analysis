@@ -14,10 +14,8 @@
   <version>${revision}${changelist}</version>
   <packaging>hpi</packaging>
 
-  <!-- https://www.jenkins.io/doc/developer/publishing/style-guides/#plugin-naming-convention -->
   <name>NetRise</name>
   <url>https://github.com/${gitHubRepo}</url>
-  <!-- should be a valid license https://www.jenkins.io/doc/developer/publishing/preparation/#license -->
   <licenses>
     <license>
       <name>MIT License</name>
@@ -35,34 +33,19 @@
   <properties>
     <revision>0.0.1</revision>
     <changelist>-SNAPSHOT</changelist>
-    <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
     <jenkins.baseline>2.479</jenkins.baseline>
     <jenkins.version>${jenkins.baseline}.3</jenkins.version>
-    <!-- https://repo.jenkins-ci.org/public/io/jenkins/tools/bom/ -->
-    <jenkinsBom.version>4969.v6ffa_18d90c9f</jenkinsBom.version>
+    <jenkinsBom.version>5054.v620b_5d2b_d5e6</jenkinsBom.version>
     <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
 
     <spotless.check.skip>false</spotless.check.skip>
     <mockito.version>5.18.0</mockito.version>
-    <jackson.version>2.19.1</jackson.version>
   </properties>
 
   <dependencies>
-    <!-- JSON libs -->
     <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
-      <version>${jackson.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-annotations</artifactId>
-      <version>${jackson.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-      <version>${jackson.version}</version>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>jackson2-api</artifactId>
     </dependency>
 
     <dependency>
@@ -83,7 +66,6 @@
       <version>${mockito.version}</version>
       <scope>test</scope>
     </dependency>
-    <!-- Working with Pipeline -->
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-basic-steps</artifactId>
