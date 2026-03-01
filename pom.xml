@@ -39,7 +39,7 @@
     <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
 
     <spotless.check.skip>false</spotless.check.skip>
-    <mockito.version>5.18.0</mockito.version>
+    <mockito.version>5.22.0</mockito.version>
   </properties>
 
   <dependencies>
